@@ -25,6 +25,8 @@ const onClickFavorite = () => {
         :title="item.title" 
         :img-url="item.imageUrl" 
         :price="item.price" 
+        :onClickAdd="onClickAdd"
+        :isFavorite="item.isFavorite"
         />
     </div>
 </template>
