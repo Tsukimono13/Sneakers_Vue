@@ -9,12 +9,12 @@ interface Item {
 
 defineProps<{ items: Item[] }>();
 
+const emit = defineEmits(['addToFavorite'])
+
 const onClickAdd = () => {
-    console.log('add')
+    
 }
-const onClickFavorite = () => {
-    console.log('favorite')
-}
+
 </script>
 
 <template>
@@ -27,6 +27,7 @@ const onClickFavorite = () => {
         :price="item.price" 
         :onClickAdd="onClickAdd"
         :isFavorite="item.isFavorite"
+        :onClickFavorite="() => emit('addToFavorite', item)"
         />
     </div>
 </template>

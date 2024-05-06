@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue';
+import { onMounted, provide, reactive, ref, watch } from 'vue';
 import Header from './widgets/Header.vue';
 import CardList from './components/CardList.vue';
 import Drawer from './components/Drawer.vue';
@@ -16,10 +16,24 @@ interface ItemType {
   imageUrl: string
 }
 
+interface FavoriteType extends ItemType {
+  parentId: number;
+}
+
 const items = ref<ItemType[]>([]);
+const drawerOpen = ref(false);
+
+const closeDrawer = () => {
+  drawerOpen.value = false
+}
+
+const openDrawer = () => {
+  drawerOpen.value = true
+}
+
 const filters = reactive({
-  sortBy: 'title',
-  searchQuery: '',
+  sortBy: "title",
+  searchQuery: "",
 });
 
 const onChangeSelect = (event: EventType) => {
@@ -31,13 +45,31 @@ const onChangeSearchInput = (event: EventType) => {
 }
 
 const addToFavorite = async (item: any) => {
-  item.isFavorite = true
+  try {
+   if (!item.isFavorite) {
+    const obj = {
+      parentId: item.id
+    }
+
+    item.isFavorite = true
+
+    const { data } = await axios.post<any>(`https://c73785999a69886f.mokky.dev/favorites`, obj);
+
+    item.favoriteId = data.id
+   } else {
+    item.isFavorite = false
+    await axios.delete(`https://c73785999a69886f.mokky.dev/favorites/${item.favoriteId}`);
+    item.favoriteId = null
+   }
+  } catch (error) {
+    console.log(error)
+  }
 }
 
 const fetchFavorites = async () => {
   try {
-    const { data: favorites } = await axios.get<any>(`https://c73785999a69886f.mokky.dev/favorites`);
-    items.value = items.value.map(item => {
+    const { data: favorites } = await axios.get<FavoriteType[]>(`https://c73785999a69886f.mokky.dev/favorites`);
+    items.value = items.value.map((item: any) => {
       const favorite = favorites.find(favorite => favorite.parentId === item.id)
 
       if (!favorite) {
@@ -63,7 +95,12 @@ const fetchItems = async () => {
     const { data } = await axios.get(`https://c73785999a69886f.mokky.dev/items`, {
       params
     })
-    items.value = data.map((item: ItemType) => ({ ...item, isFavorite: false, isAdded: false }));
+    items.value = data.map((item: ItemType) => ({ 
+      ...item, 
+      isFavorite: false, 
+      favoriteId: null,
+      isAdded: false
+     }));
   } catch (error) {
     console.log(error)
   }
@@ -75,14 +112,16 @@ onMounted(async () => {
 });
 watch(filters, fetchItems);
 
-
-
+provide('cartActions', {
+  closeDrawer,
+  openDrawer
+})
 </script>
 
 <template>
   <div class="w-4/5 m-auto bg-white rounded-xl shadow-xl mt-14">
-    <Header />
-    <!-- <Drawer /> -->
+    <Header @open-drawer="openDrawer"/>
+    <Drawer v-if="drawerOpen" />
     <div class="p-10">
       <div class="flex justify-between items-center">
         <h2 class="text-3xl font-bold mb-8">Все кроссовки</h2>
@@ -104,7 +143,7 @@ watch(filters, fetchItems);
       </div>
 
       <div class="mt-10">
-        <CardList :items="items" />
+        <CardList :items="items" @add-to-favorite="addToFavorite" />
       </div>
 
     </div>
